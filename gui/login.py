@@ -1,4 +1,6 @@
 import customtkinter as ctk
+from gui.register import Registration
+
   
 
 
@@ -51,7 +53,12 @@ class LoginWindow:
         success = self.auth.login(username, password)
         print(success)
     def register(self):
-        print("Clicked")
+        self.window.withdraw()
+        registration = Registration(self.window,self.auth)
+        # Wait until the registration window is closed
+        self.window.wait_window(registration.window)
+
+        self.window.deiconify()
     def run(self):
         self.window.mainloop()
 
