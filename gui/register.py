@@ -1,10 +1,14 @@
 import customtkinter as ctk
+import base64
+from cryptography.rsa_manager import generate_key_pair, save_private_key
+
 
 class Registration:
-    def __init__(self,parent,auth):
+    def __init__(self,parent,auth,client):
         
         # Window
         self.auth = auth
+        self.client = client
         self.window = ctk.CTkToplevel(parent)
         self.window.title("Register")
         self.window.geometry("900x400")
@@ -61,9 +65,19 @@ class Registration:
             self.password_entry.delete(0, "end")
             self.repassword_entry.delete(0, "end")
             return
-        success = self.auth.register(username,password)
-        if success:
-            
+        try:
+            private_key, public_key = generate_key_pair()
+            self.client.connect()
+            public_key_b64 = base64.b64encode(public_key).decode()
+            self.client.send(f"REGISTER|{username}|{password}|{public_key_b64}")
+            response = self.client.receive()
+            self.client.close()
+        except Exception as e:
+            self.status_label.configure(text=f"Connection Error: {e}")
+            return
+
+        if response == "Register_Success":
+            save_private_key(username, private_key)
             self.window.destroy()
             return
         else:

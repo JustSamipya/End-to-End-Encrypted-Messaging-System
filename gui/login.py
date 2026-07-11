@@ -1,13 +1,15 @@
 import customtkinter as ctk
 from gui.register import Registration
+from gui.chat import ChatWindow
 
   
 
 
 class LoginWindow:
-    def __init__(self,auth):
+    def __init__(self,auth,client):
         # Window
         self.auth = auth
+        self.client = client
         self.window = ctk.CTk()
         self.window.title("Secure Chat")
         self.window.geometry("900x400")
@@ -45,16 +47,58 @@ class LoginWindow:
         
         self.register_button = ctk.CTkButton(self.main_frame,width=50,command=self.register,text="Register")
         self.register_button.grid(row=4,column = 1,pady=20, padx = 20)
+
+        #Status Label
+        self.status_label = ctk.CTkLabel(self.main_frame, text="", text_color="red")
+        self.status_label.grid(row=5, column=0, columnspan=2, pady=10)
         
 
     def login(self):
-        username = self.username_entry.get()
+        username = self.username_entry.get().strip()
         password = self.password_entry.get()
-        success = self.auth.login(username, password)
-        print(success)
+
+        # Check for empty fields
+        if not username or not password:
+            self.status_label.configure(text="All fields are required")
+            return
+
+        try:
+            # Connect to the server
+            print("1. Connecting...")
+            self.client.connect()
+
+            # Send login request
+            print("2. Sending login packet...") 
+            self.client.send(f"LOGIN|{username}|{password}")
+
+            # Wait for server response
+            print("3. Waiting for response...")
+            response = self.client.receive()
+            print("4. Response:", repr(response))
+            if response == "Login_Success":
+                self.window.withdraw()
+
+                chat = ChatWindow(self.window, username, self.client)
+
+                self.window.wait_window(chat.window)
+                self.client.close()
+
+                self.username_entry.delete(0, "end")
+                self.password_entry.delete(0, "end")
+                self.window.deiconify()
+
+            else:
+                self.status_label.configure(text="Invalid username or password")
+                self.password_entry.delete(0, "end")
+                self.client.close()
+
+        except Exception as e:
+            self.status_label.configure(text=f"Connection Error: {e}")
+                
+
     def register(self):
         self.window.withdraw()
-        registration = Registration(self.window,self.auth)
+        registration =Registration(self.window, self.auth, self.client)
         # Wait until the registration window is closed
         self.window.wait_window(registration.window)
 
